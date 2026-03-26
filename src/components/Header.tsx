@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Section } from "@/pages/Index";
 import Icon from "@/components/ui/icon";
+import { useCart } from "@/context/CartContext";
 
 interface HeaderProps {
   activeSection: Section;
@@ -18,6 +19,7 @@ const navItems: { label: string; section: Section }[] = [
 
 export default function Header({ activeSection, onNavigate }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { totalCount } = useCart();
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-blue-100 shadow-sm">
@@ -80,11 +82,16 @@ export default function Header({ activeSection, onNavigate }: HeaderProps) {
           {/* Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onNavigate("catalog")}
-              className="hidden sm:flex items-center gap-2 bg-primary hover:bg-brand-blue-dark text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md hover:shadow-lg"
+              onClick={() => onNavigate("cart")}
+              className="hidden sm:flex items-center gap-2 bg-primary hover:bg-brand-blue-dark text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md hover:shadow-lg relative"
             >
               <Icon name="ShoppingCart" size={16} />
               Корзина
+              {totalCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-5 h-5 bg-orange-500 text-white text-xs font-black rounded-full flex items-center justify-center">
+                  {totalCount > 9 ? "9+" : totalCount}
+                </span>
+              )}
             </button>
 
             {/* Mobile menu */}

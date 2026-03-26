@@ -1,5 +1,11 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
+import { useCart } from "@/context/CartContext";
+import { Section } from "@/pages/Index";
+
+interface CatalogPageProps {
+  onNavigate: (section: Section) => void;
+}
 
 const products = [
   {
@@ -62,11 +68,11 @@ const products = [
 
 const categories = ["Все", "Ортопедия", "Протезы и ортезы", "Реабилитация", "Урология", "Уход"];
 
-export default function CatalogPage() {
+export default function CatalogPage({ onNavigate }: CatalogPageProps) {
   const [activeCategory, setActiveCategory] = useState("Все");
   const [search, setSearch] = useState("");
   const [certOnly, setCertOnly] = useState(false);
-  const [added, setAdded] = useState<number[]>([]);
+  const { addItem, items, totalCount } = useCart();
 
   const filtered = products.filter((p) => {
     const matchCat = activeCategory === "Все" || p.category === activeCategory;
@@ -75,9 +81,7 @@ export default function CatalogPage() {
     return matchCat && matchSearch && matchCert;
   });
 
-  const handleAdd = (id: number) => {
-    setAdded((prev) => (prev.includes(id) ? prev : [...prev, id]));
-  };
+  const isInCart = (id: number) => items.some((i) => i.id === id);
 
   return (
     <section className="py-12 bg-gray-50 min-h-screen">
@@ -114,7 +118,6 @@ export default function CatalogPage() {
               <span className="text-sm font-medium">Только по сертификату</span>
             </label>
           </div>
-
           <div className="flex flex-wrap gap-2 mt-4">
             {categories.map((cat) => (
               <button
@@ -179,15 +182,15 @@ export default function CatalogPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => handleAdd(product.id)}
+                    onClick={() => addItem(product)}
                     className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                      added.includes(product.id)
+                      isInCart(product.id)
                         ? "bg-green-500 text-white"
                         : "bg-primary hover:bg-brand-blue-dark text-white shadow-md hover:shadow-lg"
                     }`}
                   >
-                    <Icon name={added.includes(product.id) ? "Check" : "ShoppingCart"} size={15} />
-                    {added.includes(product.id) ? "В корзине" : "Добавить в корзину"}
+                    <Icon name={isInCart(product.id) ? "Check" : "ShoppingCart"} size={15} />
+                    {isInCart(product.id) ? "В корзине" : "В корзину"}
                   </button>
                 </div>
               </div>
@@ -195,14 +198,17 @@ export default function CatalogPage() {
           </div>
         )}
 
-        {/* Cart badge */}
-        {added.length > 0 && (
+        {/* Floating cart button */}
+        {totalCount > 0 && (
           <div className="fixed bottom-8 right-8 z-50">
-            <button className="flex items-center gap-2 bg-primary text-white px-6 py-4 rounded-2xl shadow-2xl font-bold text-sm hover:bg-brand-blue-dark transition-all hover:-translate-y-1">
+            <button
+              onClick={() => onNavigate("cart")}
+              className="flex items-center gap-2 bg-primary text-white px-6 py-4 rounded-2xl shadow-2xl font-bold text-sm hover:bg-brand-blue-dark transition-all hover:-translate-y-1"
+            >
               <Icon name="ShoppingCart" size={20} />
-              Корзина: {added.length} товар{added.length > 4 ? "ов" : added.length > 1 ? "а" : ""}
+              Перейти в корзину
               <span className="bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-xs font-black ml-1">
-                {added.length}
+                {totalCount}
               </span>
             </button>
           </div>

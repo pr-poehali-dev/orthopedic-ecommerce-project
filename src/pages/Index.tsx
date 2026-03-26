@@ -9,8 +9,9 @@ import ConsultationSection from "@/components/ConsultationSection";
 import ContactsSection from "@/components/ContactsSection";
 import Footer from "@/components/Footer";
 import CatalogPage from "@/components/CatalogPage";
+import CartPage from "@/components/CartPage";
 
-export type Section = "home" | "catalog" | "about" | "delivery" | "consultation" | "contacts";
+export type Section = "home" | "catalog" | "about" | "delivery" | "consultation" | "contacts" | "cart";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState<Section>("home");
@@ -34,7 +35,8 @@ const Index = () => {
         </>
       )}
 
-      {activeSection === "catalog" && <CatalogPage />}
+      {activeSection === "catalog" && <CatalogPage onNavigate={navigate} />}
+      {activeSection === "cart" && <CartPage onNavigate={navigate} />}
       {activeSection === "about" && <AboutSection fullPage />}
       {activeSection === "delivery" && <DeliverySection />}
       {activeSection === "consultation" && <ConsultationSection fullPage />}
