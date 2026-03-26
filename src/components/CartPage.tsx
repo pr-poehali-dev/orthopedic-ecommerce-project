@@ -3,6 +3,8 @@ import { useCart } from "@/context/CartContext";
 import { Section } from "@/pages/Index";
 import Icon from "@/components/ui/icon";
 
+const SEND_ORDER_URL = "https://functions.poehali.dev/b428a8cf-3601-4747-bce6-7bacd25f0318";
+
 interface CartPageProps {
   onNavigate: (section: Section) => void;
 }
@@ -17,6 +19,8 @@ export default function CartPage({ onNavigate }: CartPageProps) {
   const [certNum, setCertNum] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [receiptSent, setReceiptSent] = useState(false);
 
   const delivery = totalPrice >= 5000 ? 0 : 350;
   const total = totalPrice + delivery;
@@ -32,9 +36,40 @@ export default function CartPage({ onNavigate }: CartPageProps) {
     return Object.keys(e).length === 0;
   };
 
-  const handleOrder = (e: React.FormEvent) => {
+  const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      const payload = {
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+        payMethod,
+        certNum: payMethod === "cert" ? certNum : "",
+        items: items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          category: i.category,
+          price: i.price,
+          qty: i.qty,
+          cert: i.cert,
+        })),
+        totalPrice,
+        delivery,
+      };
+      const res = await fetch(SEND_ORDER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setReceiptSent(data.receipt_sent === true);
+    } catch {
+      setReceiptSent(false);
+    } finally {
+      setSubmitting(false);
       setStep("success");
       clearCart();
     }
@@ -66,21 +101,30 @@ export default function CartPage({ onNavigate }: CartPageProps) {
     return (
       <section className="py-20 bg-gray-50 min-h-screen">
         <div className="container max-w-2xl mx-auto text-center">
-          <div className="bg-white rounded-3xl p-16 shadow-sm border border-border animate-fade-in">
+          <div className="bg-white rounded-3xl p-12 shadow-sm border border-border animate-fade-in">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Icon name="CheckCircle" size={40} className="text-green-500" />
             </div>
             <h2 className="text-3xl font-black mb-3 text-foreground">Заказ оформлен!</h2>
-            <p className="text-muted-foreground mb-2 text-lg">
+            <p className="text-muted-foreground mb-4 text-lg">
               Спасибо за покупку. Мы свяжемся с вами в течение 30 минут.
             </p>
-            {payMethod === "cert" && (
-              <div className="mt-4 mb-6 bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-primary">
-                <Icon name="Info" size={16} className="inline mr-2" />
-                Для оплаты электронным сертификатом наш менеджер уточнит детали по телефону и оформит все необходимые документы.
+
+            {receiptSent && (
+              <div className="mb-4 bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-700 flex items-start gap-3 text-left">
+                <Icon name="Mail" size={18} className="flex-shrink-0 mt-0.5" />
+                <span>Чек с составом заказа отправлен на почту <strong>{form.email}</strong></span>
               </div>
             )}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+
+            {payMethod === "cert" && (
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-primary flex items-start gap-3 text-left">
+                <Icon name="Info" size={18} className="flex-shrink-0 mt-0.5" />
+                <span>Для оплаты электронным сертификатом наш менеджер уточнит детали по телефону и оформит все необходимые документы для ФСС.</span>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
               <button
                 onClick={() => onNavigate("home")}
                 className="bg-primary hover:bg-brand-blue-dark text-white px-8 py-3 rounded-xl font-bold transition-all"
@@ -224,7 +268,12 @@ export default function CartPage({ onNavigate }: CartPageProps) {
                     {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                   </div>
                   <div>
-                    <label className="text-sm font-semibold mb-1.5 block">Email</label>
+                    <label className="text-sm font-semibold mb-1.5 block flex items-center gap-1.5">
+                      Email
+                      <span className="text-xs font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        для получения чека
+                      </span>
+                    </label>
                     <input
                       type="email"
                       placeholder="email@example.com"
@@ -412,9 +461,20 @@ export default function CartPage({ onNavigate }: CartPageProps) {
 
                     <button
                       type="submit"
-                      className="w-full bg-primary hover:bg-brand-blue-dark text-white py-4 rounded-xl font-black text-base transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 mt-2"
+                      disabled={submitting}
+                      className="w-full bg-primary hover:bg-brand-blue-dark disabled:opacity-60 disabled:cursor-not-allowed text-white py-4 rounded-xl font-black text-base transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 mt-2 flex items-center justify-center gap-2"
                     >
-                      {payMethod === "cert" ? "Оформить заказ с сертификатом" : "Оформить заказ"}
+                      {submitting ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                          </svg>
+                          Отправляем заказ...
+                        </>
+                      ) : (
+                        payMethod === "cert" ? "Оформить заказ с сертификатом" : "Оформить заказ"
+                      )}
                     </button>
 
                     <p className="text-xs text-muted-foreground text-center leading-relaxed">
